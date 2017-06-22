@@ -4,7 +4,7 @@
 //
 //  Created by Ari on 2017/6/22.
 //  Copyright © 2017年 com.Ari. All rights reserved.
-//
+//  如有雷同 你我师出同门或者你就是师傅
 
 import UIKit
 import AVFoundation
@@ -12,7 +12,8 @@ class ViewController: UIViewController {
 
     //创建捕捉会话
     fileprivate var session :AVCaptureSession? = AVCaptureSession()
-    fileprivate var videoconnection: AVCaptureConnection?
+//    fileprivate var videoconnection: AVCaptureConnection?
+    fileprivate var videoOutput: AVCaptureOutput?
     fileprivate var previewLayer: CALayer?
     fileprivate var videoInput: AVCaptureDeviceInput?
     override func viewDidLoad() {
@@ -52,6 +53,12 @@ extension ViewController {
     //切换摄像头
     @IBAction func chageCamera(_ sender: Any) {
         guard let session = session else { return }
+        //0.添加动画效果
+        let rotaionAnim = CATransition()
+        rotaionAnim.type = "oglFlip"
+        rotaionAnim.subtype = "fromLeft"
+        rotaionAnim.duration = 0.5
+        view.layer.add(rotaionAnim, forKey: nil)
         
         //1.取出之前镜头的方向
         guard let videoInput = videoInput else { return}
@@ -59,14 +66,17 @@ extension ViewController {
         guard let devices = AVCaptureDevice.devices() as?[AVCaptureDevice] else{return}
         guard let device = devices.filter({$0.position == oritation}).first else {return}
         guard let newInput = try? AVCaptureDeviceInput(device: device) else {return}
+        
+        let newOutput = AVCaptureVideoDataOutput()
+        newOutput.setSampleBufferDelegate(self, queue: DispatchQueue.global())
+        
         //移除之前的input 添加新的input
-        session.beginConfiguration()
         session.removeInput(videoInput)
-        if session.canAddInput(newInput) {
-            session.addInput(newInput)
-            self.videoInput = newInput
-        }
-        session.commitConfiguration()
+        session.removeOutput(videoOutput)
+        addInputOutput2session(newInput, newOutput)
+        self.videoInput = newInput
+        videoOutput = newOutput
+//        videoconnection = newOutput.connection(withMediaType: AVMediaTypeVideo)
         
     }
     
@@ -91,10 +101,9 @@ extension ViewController {
         //2.添加视频的输出
         let output = AVCaptureVideoDataOutput()
         output.setSampleBufferDelegate(self, queue: DispatchQueue.global())
-       addInputOutput2session(input, output)
-        videoconnection = output.connection(withMediaType: AVMediaTypeVideo)
-        
-
+        addInputOutput2session(input, output)
+        videoOutput = output
+//        videoconnection = output.connection(withMediaType: AVMediaTypeVideo)
     }
     
     fileprivate func setupAudioInputOutput(){
@@ -110,16 +119,18 @@ extension ViewController {
     }
     
     fileprivate func addInputOutput2session(_ input: AVCaptureInput ,_ output: AVCaptureOutput){
+        guard let session = session else { return }
+         session.beginConfiguration()
         //3.添加输入输出
-        if session!.canAddInput(input) {
-            session?.addInput(input)
+        if session.canAddInput(input) {
+            session.addInput(input)
         }
-        if session!.canAddOutput(output){
-            session?.addOutput(output)
+        if session.canAddOutput(output){
+            session.addOutput(output)
         }
 
         //完成配置
-        session?.commitConfiguration()
+        session.commitConfiguration()
     }
     
     fileprivate func setupPreviewLayer(){
@@ -136,19 +147,21 @@ extension ViewController {
 
 extension ViewController : AVCaptureVideoDataOutputSampleBufferDelegate,AVCaptureAudioDataOutputSampleBufferDelegate{
     
-    //两个代理实际采集代理方法一致  所以要区分
+ 
     //丢弃掉的
     func captureOutput(_ captureOutput: AVCaptureOutput!, didDrop sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
         
     }
+    
+    //两个代理实际采集代理方法一致  所以要区分
     //实际输出的
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
+        print(connection.output)
         
-        if videoconnection == connection {
-            print("视频采集")
-        }else{
-            print("音频采集")
-        }
-        
+//        if videoOutput?.connection(withMediaType: AVMediaTypeVideo) == connection {
+//             print("视频采集")
+//        }else{
+//            print("音频采集")
+//        }
     }
 }
