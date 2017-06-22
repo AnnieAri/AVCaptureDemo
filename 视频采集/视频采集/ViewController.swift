@@ -10,8 +10,8 @@ import UIKit
 import AVFoundation
 class ViewController: UIViewController {
 
-    //创建捕捉会话 - 懒加载
-    fileprivate lazy var session :AVCaptureSession = AVCaptureSession()
+    //创建捕捉会话
+    fileprivate var session :AVCaptureSession? = AVCaptureSession()
     fileprivate var videoconnection: AVCaptureConnection?
     fileprivate var previewLayer: CALayer?
     fileprivate var videoInput: AVCaptureDeviceInput?
@@ -32,18 +32,27 @@ class ViewController: UIViewController {
 // MARK: - 对采集的控制方法
 extension ViewController {
     @IBAction func startCapture(_ sender: Any) {
-        session.startRunning()
+        if videoInput == nil {
+            setupVideoInputOutput()
+            setupAudioInputOutput()
+            setupPreviewLayer()
+        }
+        session?.startRunning()
         
     }
 
     @IBAction func endCapture(_ sender: Any) {
         //移除图层
         previewLayer?.removeFromSuperlayer()
-        
-        session.stopRunning()
+        session?.stopRunning()
+        videoInput = nil
+        previewLayer = nil
+        session = nil
     }
     //切换摄像头
     @IBAction func chageCamera(_ sender: Any) {
+        guard let session = session else { return }
+        
         //1.取出之前镜头的方向
         guard let videoInput = videoInput else { return}
         let oritation: AVCaptureDevicePosition = videoInput.device.position == .front ? .back : .front
@@ -65,6 +74,9 @@ extension ViewController {
 //初始化方法
 extension ViewController {
     fileprivate func setupVideoInputOutput(){
+        if session == nil {
+            session = AVCaptureSession()
+        }
         //1.添加视频的输入
         /**
          AVCaptureDevice.defaultDevice(withDeviceType: <#T##AVCaptureDeviceType!#>, mediaType: <#T##String!#>, position: <#T##AVCaptureDevicePosition#>)  --- 10.0以后的方法
@@ -99,15 +111,15 @@ extension ViewController {
     
     fileprivate func addInputOutput2session(_ input: AVCaptureInput ,_ output: AVCaptureOutput){
         //3.添加输入输出
-        if session.canAddInput(input) {
-            session.addInput(input)
+        if session!.canAddInput(input) {
+            session?.addInput(input)
         }
-        if session.canAddOutput(output){
-            session.addOutput(output)
+        if session!.canAddOutput(output){
+            session?.addOutput(output)
         }
 
         //完成配置
-        session.commitConfiguration()
+        session?.commitConfiguration()
     }
     
     fileprivate func setupPreviewLayer(){
